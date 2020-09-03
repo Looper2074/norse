@@ -37,7 +37,8 @@ class LIFRefracParameters(NamedTuple):
 
 
 def compute_refractory_update(
-    state: LIFRefracState,
+    rho: torch.Tensor,
+    v: torch.Tensor,
     z_new: torch.Tensor,
     v_new: torch.Tensor,
     p: LIFRefracParameters = LIFRefracParameters(),
@@ -50,13 +51,13 @@ def compute_refractory_update(
         v_new (torch.Tensor): New voltage after the lif update step.
         p (torch.Tensor): Refractoryp.
     """
-    refrac_mask = threshold(state.rho, p.lif.method, p.lif.alpha)
-    v_new = (1 - refrac_mask) * v_new + refrac_mask * state.lif.v
+    refrac_mask = threshold(rho, p.lif.method, p.lif.alpha)
+    v_new = (1 - refrac_mask) * v_new + refrac_mask * v
     z_new = (1 - refrac_mask) * z_new
 
     # compute update to refractory counter
     rho_new = (1 - z_new) * torch.nn.functional.relu(
-        state.rho - refrac_mask
+        rho - refrac_mask
     ) + z_new * p.rho_reset
 
     return v_new, z_new, rho_new
@@ -84,7 +85,7 @@ def lif_refrac_step(
     z_new, s_new = lif_step(
         input_tensor, state.lif, input_weights, recurrent_weights, p.lif, dt
     )
-    v_new, z_new, rho_new = compute_refractory_update(state, z_new, s_new.v, p)
+    v_new, z_new, rho_new = compute_refractory_update(state.rho, state.lif.v, z_new, s_new.v, p)
 
     return z_new, LIFRefracState(LIFState(z_new, v_new, s_new.i), rho_new)
 
@@ -118,7 +119,7 @@ def lif_refrac_feed_forward_step(
         dt (float): Integration timestep to use
     """
     z_new, s_new = lif_feed_forward_step(input_tensor, state.lif, p.lif, dt)
-    v_new, z_new, rho_new = compute_refractory_update(state, z_new, s_new.v, p)
+    v_new, z_new, rho_new = compute_refractory_update(state.rho, state.lif.v, z_new, s_new.v, p)
 
     return (
         z_new,

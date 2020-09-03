@@ -127,6 +127,22 @@ class LIFLayer(torch.nn.Module):
     def forward(
         self, input_tensor: torch.Tensor, state: Optional[LIFState] = None
     ) -> Tuple[torch.Tensor, LIFState]:
+        if state is None:
+            state = LIFState(
+                z=torch.zeros(
+                    input_tensor.shape[0],
+                    self.hidden_size,
+                    device=input_tensor.device,
+                    dtype=input_tensor.dtype,
+                ),
+                v=self.p.v_leak,
+                i=torch.zeros(
+                    input_tensor.shape[0],
+                    self.hidden_size,
+                    device=input_tensor.device,
+                    dtype=input_tensor.dtype,
+                ),
+        )
         inputs = input_tensor.unbind(0)
         outputs = []  # torch.jit.annotate(List[torch.Tensor], [])
         for _, input_step in enumerate(inputs):

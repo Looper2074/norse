@@ -113,4 +113,4 @@ class LIFeedForwardCell(torch.nn.Module):
                     dtype=input_tensor.dtype
                 ),
             )
-        return li_feed_forward_step(input_tensor, s, p=self.p, dt=self.dt)
+        return li_feed_forward_step(input_tensor, state, p=self.p, dt=self.dt)

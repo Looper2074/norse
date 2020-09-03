@@ -12,6 +12,7 @@ from ..functional.lsnn import (
 )
 
 
+
 class LSNNCell(torch.nn.Module):
     r"""Module that computes a single euler-integration step of a LSNN
     neuron-model. More specifically it implements one integration step of
@@ -70,11 +71,8 @@ class LSNNCell(torch.nn.Module):
         self.p = p
         self.dt = dt
 
-    def forward(
-        self, input_tensor: torch.Tensor, state: Optional[LSNNState] = None
-    ) -> Tuple[torch.Tensor, LSNNState]:
-        if state is None:
-            state = LSNNState(
+    def initial_state_from(self, input_tensor : torch.Tensor) -> LSNNState:
+        return LSNNState(
                 z=torch.zeros(
                     input_tensor.shape[0],
                     self.output_features,
@@ -95,6 +93,12 @@ class LSNNCell(torch.nn.Module):
                     dtype=input_tensor.dtype,
                 ),
             )
+
+    def forward(
+        self, input_tensor: torch.Tensor, state: Optional[LSNNState] = None
+    ) -> Tuple[torch.Tensor, LSNNState]:
+        if state is None:
+            state = self.initial_state_from(input_tensor)
         return lsnn_step(
             input_tensor,
             state,
@@ -144,6 +148,10 @@ class LSNNLayer(torch.nn.Module):
         """
         inputs = input_tensor.unbind(0)
         outputs = []  # torch.jit.annotate(List[torch.Tensor], [])
+
+        if state is None:
+            state = self.cell.initoial_state_from(input_tensor)
+
         for input_step in inputs:
             out, state = self.cell(input_step, state)
             outputs += [out]
